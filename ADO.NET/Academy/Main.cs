@@ -19,9 +19,53 @@ namespace Academy
 		Connector connector;
 
 		Dictionary<string, int> d_directions;
+
+		DataGridView[] tables;
+		Query[] queries = new Query[]
+			{
+				new Query
+				(
+					"last_name,first_name,middle_name,birth_date,direction_name",
+						"Students,Groups,Directions",
+						"[group]=group_id AND direction = direction_id"
+				),
+				new Query
+				(
+					"group_name,dbo.GetLearningDaysFor(group_name) AS weekdays, start_time, direction_name",
+							"Groups, Directions ",
+							"direction=direction_id"
+				),
+				new Query
+				(
+					"direction_name, COUNT (DISTINCT group_id) AS N'Количество Групп', COUNT (stud_id) AS N'Количество Студентов'",
+						"Students RIGHT JOIN Groups ON ([group]=group_id) RIGHT JOIN Directions ON (direction=direction_id)",
+						"",
+						"direction_name"
+				),
+				new Query ("*", "Disciplines"),
+				new Query ("*", "Disciplines")
+			};
+
+		string[] status_messages = new string[]
+			{
+			$"Количество студентов: ",
+			$"Количество групп: ",
+			$"Количество направлений: ",
+			$"Количество дисциплин: ",
+			$"Количество преподавателей: ",
+			};
 		public Main()
 		{
 			InitializeComponent();
+
+		tables = new DataGridView[]
+			{
+			dgvStudents,
+			dgvGroups,
+			dgvDirections,
+			dgvDisciplines,
+			dgvTeachers
+			};
 
 			connector = new Connector
 				(
@@ -39,7 +83,12 @@ namespace Academy
 
 		private void tabControl_SelectedIndexChanged(object sender, EventArgs e)
 		{
-			switch (tabControl.SelectedIndex)
+			int i = tabControl.SelectedIndex;
+			Query query = queries[i];
+			tables[i].DataSource = connector.Select(query.Columns, query.Tables, query.Condition, query.Group_by);
+			toolStripStatusLabelCount.Text = status_messages[i] + CountRecordsInDGV(tables[i]); 
+		
+			/*switch (tabControl.SelectedIndex)
 			{
 				case 0:
 					dgvStudents.DataSource = connector.Select
@@ -89,7 +138,7 @@ namespace Academy
 						toolStripStatusLabelCount.Text = $"Количество преподавателей:{dgvTeachers.RowCount - 1}.";
 					}
 					break;
-			}
+			}*/
 		}
 
 		private void cbGroupsDirection_SelectedIndexChanged(object sender, EventArgs e)
