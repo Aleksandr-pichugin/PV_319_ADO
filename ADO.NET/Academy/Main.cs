@@ -10,6 +10,9 @@ using System.Windows.Forms;
 
 using System.Configuration;
 using System.Security.Cryptography;
+using System.Drawing.Imaging;
+using System.Security.Policy;
+using System.Xml.Linq;
 
 namespace Academy
 {
@@ -148,12 +151,18 @@ namespace Academy
 							"group_name,dbo.GetLearningDaysFor(group_name) AS weekdays, start_time, direction_name",
 							"Groups, Directions ",
 							$"direction=direction_id AND direction = N'{d_directions[cbGroupsDirection.SelectedItem.ToString()]}'"
-							);
+				);
 			toolStripStatusLabelCount.Text = $"Количество групп:{CountRecordsInDGV(dgvGroups)}.";
 		}
 		int CountRecordsInDGV(DataGridView dgv)
 		{ 
 		return dgv.RowCount==0 ? 0 : dgv.RowCount - 1;
+		}
+
+
+		private void cbDirections_CheckedChanged(object sender, EventArgs e)
+		{
+			
 		}
 	}
 }
