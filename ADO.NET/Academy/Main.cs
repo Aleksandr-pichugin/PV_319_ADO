@@ -21,8 +21,8 @@ namespace Academy
 
 		Connector connector;
 
-		Dictionary<string, int> d_directions;
-		Dictionary<string, int> d_groups;
+		public Dictionary<string, int> d_directions;
+		public Dictionary<string, int> d_groups;
 
 		DataGridView[] tables;
 		Query[] queries = new Query[]
@@ -88,10 +88,12 @@ namespace Academy
 			cbStudentsGroup.Items.AddRange(d_groups.Select(g => g.Key).ToArray());
 			cbGroupsDirection.Items.AddRange(d_directions.Select(d => d.Key).ToArray());
 			cbStudentsDirection.Items.AddRange(d_directions.Select(d => d.Key).ToArray());
-			cbStudentsDirection.Items.Insert(0, "Все напправления");
 			cbStudentsGroup.Items.Insert(0, "Все группы");
-			cbStudentsDirection.SelectedIndex = cbStudentsGroup.SelectedIndex = 0;
-
+			cbStudentsDirection.Items.Insert(0, "Все напправления");
+			cbGroupsDirection.Items.Insert(0, "Все напправления");
+			cbStudentsDirection.SelectedIndex = 0;
+			cbGroupsDirection.SelectedIndex = 0;
+			
 			toolStripStatusLabelCount.Text = $"Количество студентов:{dgvStudents.RowCount - 1}.";
 		}
 
@@ -103,6 +105,8 @@ namespace Academy
 		}
 		private void tabControl_SelectedIndexChanged(object sender, EventArgs e)
 		{
+			string tab_name = tabControl.SelectedTab.Name;
+			Console.WriteLine(tab_name);
 			//int i = tabControl.SelectedIndex;
 			LoadPage(tabControl.SelectedIndex);
 
@@ -159,37 +163,60 @@ namespace Academy
 			}*/
 		}
 
-		private void cbGroupsDirection_SelectedIndexChanged(object sender, EventArgs e)
-		{
-			dgvGroups.DataSource = connector.Select
-				(
-							"group_name,dbo.GetLearningDaysFor(group_name) AS weekdays, start_time, direction_name",
-							"Groups, Directions ",
-							$"direction=direction_id AND direction = N'{d_directions[cbGroupsDirection.SelectedItem.ToString()]}'"
-				);
-			toolStripStatusLabelCount.Text = $"Количество групп:{CountRecordsInDGV(dgvGroups)}.";
-		}
+		
 		int CountRecordsInDGV(DataGridView dgv)
 		{
 			return dgv.RowCount == 0 ? 0 : dgv.RowCount - 1;
 		}
 
-		private void cbStudentsDirection_SelectedIndexChanged(object sender, EventArgs e)
+		private void cbDirection_SelectedIndexChanged(object sender, EventArgs e)
 		{
-			int i = cbStudentsDirection.SelectedIndex;
+			string cb_name = (sender as ComboBox).Name;
+			Console.WriteLine(cb_name);
+			string tab_name = tabControl.SelectedTab.Name;
+			Console.WriteLine(tab_name);
+
+			int last_capital_index = 
+				Array.FindLastIndex<char>(cb_name.ToCharArray(), Char.IsUpper);
+			string cb_suffix =
+				cb_name.Substring(last_capital_index);
+			Console.WriteLine(cb_name);
+			Console.WriteLine(tab_name);
+			Console.WriteLine(cb_suffix);
+			//string combo_box_suffix = combo_box_name.Substring(combo_box_name.Where(c => Char.IsUpper(c)));
+			
+			///////////////////////////////////////////////////////////////////////
+			//Есть строка, которая хранит имя вкладки(tab),
+			//из этой строки мы получаем имя словаря:
+			string dictionary_name = $"d_{cb_suffix.ToLower()}s";
+			Console.WriteLine(dictionary_name);
+			Console.WriteLine("\n----------------------------------------\n");
+			//По имени словаря, которое хранится в словаре мы получаем сам словарь при помощи рефлексии:	
+			Dictionary<string, int> dictionary =
+				this.GetType().GetField(dictionary_name).GetValue(this) as Dictionary<string,int>;
+	        //	Reflection - это подход, который позволяет обратиться к переменной, когда ее имя хранится в строке.
+			///////////////////////////////////////////////////////////////////////
+			int i = (sender as ComboBox).SelectedIndex;
+			
+			#region Filtercb_StudentsGroup
+			//Фильтруется выподающий список групп на вкладке 'Students'
 			Dictionary<string, int> d_groups = connector.GetDictionary
 				(
 				"group_id,group_name",
 				"Groups",
-				i == 0 ? "" : $"direction={d_directions[cbStudentsDirection.SelectedItem.ToString()]}"
+				i == 0 ? "" : $"{cb_suffix.ToLower()}={dictionary[(sender as ComboBox).SelectedItem.ToString()]}"
 				);
 			cbStudentsGroup.Items.Clear();
 			cbStudentsGroup.Items.AddRange(d_groups.Select(g => g.Key).ToArray());
+			//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+			#endregion
 
-			Query query =new Query(queries[0]);
-			query.Condition =
-				(i == 0 || cbStudentsDirection.SelectedItem == null ? "" : $"direction={d_directions[cbStudentsDirection.SelectedItem.ToString()]}");
-			LoadPage(0, query);
+			Query query =new Query(queries[tabControl.SelectedIndex]);
+			string condition = 
+				(i == 0 || (sender as ComboBox).SelectedItem == null ? "" : $"{cb_suffix.ToLower()}={dictionary[$"{(sender as ComboBox).SelectedItem}"]}");
+			if (query.Condition == "") query.Condition = condition;
+			else if(condition != "")query.Condition += $" AND {condition}";
+				LoadPage(tabControl.SelectedIndex, query);
 		}
 	}
 }
